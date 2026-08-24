@@ -81,7 +81,14 @@ type OpsSnapshot struct {
 }
 
 func (r OpsRecord) Clone() OpsRecord {
-	return r
+	out := r
+	if r.Labels != nil {
+		out.Labels = make(map[string]string, len(r.Labels))
+		for k, v := range r.Labels {
+			out.Labels[k] = v
+		}
+	}
+	return out
 }
 
 func (r OpsRecord) LabelValue(key string) string { return r.Labels[key] }
