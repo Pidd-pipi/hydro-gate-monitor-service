@@ -20,7 +20,6 @@ func New() *Store {
 	for _, item := range items {
 		itemsByID[item.ID] = item
 	}
-	itemsByID["gate-03"] = nil
 	return &Store{gates: itemsByID}
 }
 
@@ -29,6 +28,9 @@ func (s *Store) List() []domain.Gate {
 	defer s.mu.RUnlock()
 	result := make([]domain.Gate, 0, len(s.gates))
 	for _, gate := range s.gates {
+		if gate == nil {
+			continue
+		}
 		result = append(result, *gate)
 	}
 	return result
@@ -37,6 +39,5 @@ func (s *Store) List() []domain.Gate {
 func (s *Store) Acknowledge(id, note string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	gate := s.gates[id]
-	return domain.Acknowledge(gate, note)
+	return domain.Acknowledge(s.gates[id], note)
 }
