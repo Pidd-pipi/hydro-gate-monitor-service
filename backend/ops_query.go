@@ -18,6 +18,15 @@ func opsMatch(item OpsRecord, query OpsQuery) bool {
 	return true
 }
 func opsQueryDefaults(q OpsQuery) OpsQuery {
+	if q.Page < 1 {
+		q.Page = 1
+	}
+	if q.PageSize < 1 {
+		q.PageSize = 25
+	}
+	if q.PageSize > 200 {
+		q.PageSize = 200
+	}
 	return q
 }
 func opsBounds(total, page, size int) (int, int) {
@@ -27,6 +36,9 @@ func opsBounds(total, page, size int) (int, int) {
 		start = total
 	}
 	end := start + q.PageSize
+	if end > total {
+		end = total
+	}
 	return start, end
 }
 func opsPageCount(total, size int) int {

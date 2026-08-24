@@ -35,7 +35,6 @@ func (m *OpsStateMachine) Move(from, to OpsStatus, reason string) error {
 		return nil
 	}
 	if !opsTransitionTable[from][to] {
-		m.history = append(m.history, OpsTransition{From: from, To: to, Reason: reason})
 		return fmt.Errorf("%w: %s to %s", ErrOpsTransition, from, to)
 	}
 	m.history = append(m.history, OpsTransition{From: from, To: to, Reason: reason})
@@ -44,7 +43,7 @@ func (m *OpsStateMachine) Move(from, to OpsStatus, reason string) error {
 func (m *OpsStateMachine) History() []OpsTransition {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.history
+	return append([]OpsTransition(nil), m.history...)
 }
 func (m *OpsStateMachine) Last() (OpsTransition, bool) {
 	m.mu.RLock()
