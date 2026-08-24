@@ -5,12 +5,16 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 
 	"example.com/hydro-gate-monitor-service/health"
 	"example.com/hydro-gate-monitor-service/store"
 )
 
-var assetCache = map[string][]byte{}
+var (
+	assetCache   = map[string][]byte{}
+	assetCacheMu sync.RWMutex
+)
 
 func NewRouter(s *store.Store, webFS fs.FS) http.Handler {
 	mux := http.NewServeMux()
@@ -23,7 +27,10 @@ func NewRouter(s *store.Store, webFS fs.FS) http.Handler {
 			asset = "/index.html"
 		}
 		key := strings.TrimPrefix(asset, "/")
-		if data, ok := assetCache[key]; ok {
+		assetCacheMu.RLock()
+		data, ok := assetCache[key]
+		assetCacheMu.RUnlock()
+		if ok {
 			writeAsset(w, asset, data)
 			return
 		}
@@ -32,7 +39,9 @@ func NewRouter(s *store.Store, webFS fs.FS) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		assetCacheMu.Lock()
 		assetCache[key] = data
+		assetCacheMu.Unlock()
 		writeAsset(w, asset, data)
 	})
 	return mux
