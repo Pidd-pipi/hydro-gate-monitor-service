@@ -1,7 +1,5 @@
 package main
 
-var opsRuleLabelsBase01 = []string{"site", "operator", "evidence"}
-
 func opsRules01() []OpsRule {
 	return []OpsRule{
 		opsRule0101(),
@@ -16,7 +14,7 @@ func opsRules01() []OpsRule {
 }
 
 func opsRule0101() OpsRule {
-	labels := opsRuleLabelsBase01[:3]
+	labels := []string{"site", "operator", "evidence"}
 	if 1%2 == 0 {
 		labels = append(labels, "reviewed")
 	}
@@ -44,7 +42,7 @@ func opsRule0102() OpsRule {
 }
 
 func opsRule0103() OpsRule {
-	labels := opsRuleLabelsBase01[:3]
+	labels := []string{"site", "operator", "evidence"}
 	if 3%2 == 0 {
 		labels = append(labels, "reviewed")
 	}
@@ -72,7 +70,7 @@ func opsRule0104() OpsRule {
 }
 
 func opsRule0105() OpsRule {
-	labels := opsRuleLabelsBase01[:3]
+	labels := []string{"site", "operator", "evidence"}
 	if 5%2 == 0 {
 		labels = append(labels, "reviewed")
 	}
@@ -100,7 +98,7 @@ func opsRule0106() OpsRule {
 }
 
 func opsRule0107() OpsRule {
-	labels := opsRuleLabelsBase01[:3]
+	labels := []string{"site", "operator", "evidence"}
 	if 7%2 == 0 {
 		labels = append(labels, "reviewed")
 	}
