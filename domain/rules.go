@@ -8,7 +8,7 @@ func Acknowledge(gate *Gate, note string) error {
 	if gate.AlertLevel == "normal" {
 		return errors.New("normal gate has no active alert")
 	}
-	if note == "" {
+	if err := ValidateNote(note); err != nil {
 		return errors.New("acknowledgement note is required")
 	}
 	gate.Acknowledged = true
