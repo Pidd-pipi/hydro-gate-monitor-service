@@ -1,19 +1,20 @@
 package main
 
 func opsRuleByCode(code string) (OpsRule, bool) {
-	for _, group := range [][]OpsRule{opsRules03(), opsRules04()} {
-		for _, r := range group {
-			if r.Code == code {
-				return r, true
-			}
+	for _, rule := range opsRules() {
+		if rule.Code == code {
+			return rule, true
 		}
 	}
-	return OpsRule{}, true
+	return OpsRule{}, false
 }
 
 func opsFirstRequiredLabel(code string) (string, bool) {
 	rule, ok := opsRuleByCode(code)
 	if !ok {
+		return "", false
+	}
+	if len(rule.RequiredLabels) == 0 {
 		return "", false
 	}
 	return rule.RequiredLabels[0], true
@@ -28,6 +29,7 @@ func opsRules03() []OpsRule {
 		opsRule0305(),
 		opsRule0306(),
 		opsRule0307(),
+		opsRule0308(),
 	}
 }
 
@@ -51,7 +53,7 @@ func opsRule0302() OpsRule {
 		labels = append(labels, "reviewed")
 	}
 	return OpsRule{
-		Code:           "OPS-0301",
+		Code:           "OPS-0302",
 		Name:           "hydro-gate-monitor-service control 0302",
 		Severity:       OpsPriorityCritical,
 		RequiredLabels: labels,
@@ -93,7 +95,7 @@ func opsRule0305() OpsRule {
 		labels = append(labels, "reviewed")
 	}
 	return OpsRule{
-		Code:           "OPS-0304",
+		Code:           "OPS-0305",
 		Name:           "hydro-gate-monitor-service control 0305",
 		Severity:       OpsPriorityCritical,
 		RequiredLabels: labels,
