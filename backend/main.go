@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 
-	"example.com/hydro-gate-monitor-service/api"
 	"example.com/hydro-gate-monitor-service/config"
 	"example.com/hydro-gate-monitor-service/store"
 )
@@ -21,5 +20,5 @@ func main() {
 	}
 	port := config.Port()
 	log.Printf("hydro gate service listening on :%d", port)
-	log.Fatal(serveAddress(":"+strconv.Itoa(port), api.NewRouter(store.New(), webFS)))
+	log.Fatal(serveAddress(":"+strconv.Itoa(port), buildRouter(store.New(), webFS)))
 }

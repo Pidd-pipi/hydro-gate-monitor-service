@@ -38,18 +38,25 @@ func (p OpsPolicy) Check(record OpsRecord) error {
 func (s *OpsService) Create(ctx context.Context, record OpsRecord) (OpsRecord, error) {
 	record = normalizeOpsRecord(record)
 	if err := s.policy.Check(record); err != nil {
-		return OpsRecord{}, err
+		return OpsRecord{}, wrapOps(opsCode(err), "create.policy", err)
+	}
+	if record.Status == "" {
+		record.Status = OpsStatusQueued
 	}
 	record.CreatedAt = s.clock.Stamp()
 	record.UpdatedAt = record.CreatedAt
 	if err := s.store.Put(ctx, record); err != nil {
-		return OpsRecord{}, wrapOps("create", "store.put", err)
+		return OpsRecord{}, wrapOps(opsCode(err), "create.store.put", err)
 	}
 	s.audit.Add(record.ID, "created", record.Owner)
 	return record, nil
 }
 func (s *OpsService) Get(ctx context.Context, id string) (OpsRecord, error) {
-	return s.store.Get(ctx, id)
+	record, err := s.store.Get(ctx, id)
+	if err != nil {
+		return OpsRecord{}, wrapOps(opsCode(err), "get.store.get", err)
+	}
+	return record, nil
 }
 func (s *OpsService) Search(ctx context.Context, q OpsQuery) (OpsPage, error) {
 	items, err := s.store.List(ctx)
@@ -72,20 +79,27 @@ func (s *OpsService) Transition(ctx context.Context, id string, expected int, ta
 	defer cancel()
 	record, err := s.store.Get(ctx, id)
 	if err != nil {
-		return OpsRecord{}, err
+		return OpsRecord{}, wrapOps(opsCode(err), "transition.store.get", err)
 	}
 	if expected > 0 && expected != record.Revision {
-		return OpsRecord{}, ErrOpsConflict
+		return OpsRecord{}, wrapOps(opsCode(ErrOpsConflict), "transition.revision", ErrOpsConflict)
 	}
 	if err := s.state.Move(record.Status, target, "operator update"); err != nil {
-		return OpsRecord{}, err
+		return OpsRecord{}, wrapOps(opsCode(err), "transition.state.move", err)
 	}
 	record.Status = target
 	if err := s.store.Update(ctx, record, expected); err != nil {
-		return OpsRecord{}, err
+		return OpsRecord{}, wrapOps(opsCode(err), "transition.store.update", err)
 	}
 	s.audit.Add(record.ID, "status_changed", actor)
 	return record, nil
+}
+func (s *OpsService) Delete(ctx context.Context, id string, actor string) error {
+	if err := s.store.Delete(ctx, id); err != nil {
+		return wrapOps(opsCode(err), "delete.store.delete", err)
+	}
+	s.audit.Add(id, "deleted", actor)
+	return nil
 }
 func (s *OpsService) Audit(id string) []OpsEvent { return s.audit.For(id) }
 func (s *OpsService) Snapshot() OpsSnapshot {
