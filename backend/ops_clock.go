@@ -15,6 +15,9 @@ func (c OpsClock) Now() time.Time {
 	return c.NowFunc().UTC()
 }
 func (c OpsClock) Stamp() string { return c.Now().Format(time.RFC3339Nano) }
+// opsContext derives a timeout context from the caller's context so that
+// request cancellation and the timeout both reach the downstream operation.
+// The parent is preserved: if the caller cancels, this context is cancelled too.
 func opsContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		parent = context.Background()
@@ -22,7 +25,8 @@ func opsContext(parent context.Context, timeout time.Duration) (context.Context,
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
-	return context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(parent, timeout)
+	return ctx, cancel
 }
 func opsDeadline(ctx context.Context) bool {
 	if ctx == nil {
@@ -41,9 +45,29 @@ func opsBackoff(attempt int) time.Duration {
 	}
 	return time.Duration(1<<uint(attempt-1)) * 20 * time.Millisecond
 }
+// opsDelay waits for duration or aborts as soon as ctx is cancelled or
+// times out, returning ctx.Err() so callers can stop on cancellation/timeout
+// instead of sleeping the full duration.
 func opsDelay(ctx context.Context, duration time.Duration) error {
-	time.Sleep(duration)
-	return nil
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if duration <= 0 {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
+	}
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 func opsAge(now time.Time, stamp string) time.Duration {
 	parsed, err := opsParseStamp(stamp)
