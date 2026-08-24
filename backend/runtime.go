@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -19,7 +20,11 @@ func serveAddress(address string, handler http.Handler) error {
 }
 
 func serveHTTP(server *http.Server) error {
-	errCh := make(chan error)
+	// Buffered so the ListenAndServe goroutine can always complete its send
+	// even on the signal path, where nobody otherwise reads from errCh. An
+	// unbuffered channel would leave that goroutine blocked forever after the
+	// process returns.
+	errCh := make(chan error, 1)
 	go func() {
 		errCh <- server.ListenAndServe()
 	}()
@@ -57,8 +62,9 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
-			requestSequence++
-			requestID = fmt.Sprintf("req-%d", requestSequence)
+			// Atomic increment: a non-atomic ++ here races under concurrent
+			// requests, producing duplicate request IDs.
+			requestID = fmt.Sprintf("req-%d", atomic.AddUint64(&requestSequence, 1))
 		}
 		w.Header().Set("X-Request-ID", requestID)
 		next.ServeHTTP(w, r)

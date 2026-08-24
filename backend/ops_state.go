@@ -12,6 +12,10 @@ var opsTransitionTable = map[OpsStatus]map[OpsStatus]bool{
 	OpsStatusClosed: {},
 }
 
+// opsStateMaxHistory bounds the in-memory transition history so it cannot grow
+// without limit over the lifetime of the process.
+const opsStateMaxHistory = 10000
+
 type OpsTransition struct {
 	From   OpsStatus
 	To     OpsStatus
@@ -22,7 +26,9 @@ type OpsStateMachine struct {
 	history []OpsTransition
 }
 
-func newOpsStateMachine() *OpsStateMachine { return &OpsStateMachine{history: []OpsTransition{}} }
+func newOpsStateMachine() *OpsStateMachine {
+	return &OpsStateMachine{history: make([]OpsTransition, 0, opsStateMaxHistory)}
+}
 func (m *OpsStateMachine) CanMove(from, to OpsStatus) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -38,6 +44,10 @@ func (m *OpsStateMachine) Move(from, to OpsStatus, reason string) error {
 		return fmt.Errorf("%w: %s to %s", ErrOpsTransition, from, to)
 	}
 	m.history = append(m.history, OpsTransition{From: from, To: to, Reason: reason})
+	if len(m.history) > opsStateMaxHistory {
+		copy(m.history, m.history[len(m.history)-opsStateMaxHistory:])
+		m.history = m.history[:opsStateMaxHistory]
+	}
 	return nil
 }
 func (m *OpsStateMachine) History() []OpsTransition {
